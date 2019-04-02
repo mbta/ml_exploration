@@ -24,8 +24,14 @@ $ pip3 install --upgrade pip
 $ pip3 install --upgrade jupyter matplotlib numpy pandas scipy scikit-learn
 ```
 
-Test that it worked. The following should run with no output and no errors.
+Test that everything installed. The following should run with no output and no errors.
 
 ```
 $ python3 -c "import jupyter, matplotlib, numpy, pandas, scipy, sklearn"
+```
+
+You're now ready to go! Open up the Jupyter notebook session!
+
+```
+$ jupyter notebook
 ```
