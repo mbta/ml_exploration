@@ -30,8 +30,10 @@ Test that everything installed. The following should run with no output and no e
 $ python3 -c "import jupyter, matplotlib, numpy, pandas, scipy, sklearn"
 ```
 
-You're now ready to go! Open up the Jupyter notebook session!
+You're now ready to go! Open up the Jupyter notebook session:
 
 ```
 $ jupyter notebook
 ```
+
+Click the link for Predictions.ipynb to open the notebook and play around! To start, you should be able to just go Cell > Run All.
