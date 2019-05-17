@@ -4,7 +4,21 @@ import functools
 from collections import defaultdict
 
 
-class Pipeline:
+class Pipeline():
+    def __init__(
+        self,
+        actuals_path=os.path.join("datasets", "pa_datapoints.csv"),
+        locations_path=os.path.join("datasets", "locations.csv"),
+        patterns_path=os.path.join("datasets", "patterns.csv"),
+        terminals_path=os.path.join("datasets", "terminal_datapoints.csv"),
+        vehicles_path=os.path.join("datasets", "vehicle_datapoints.csv")
+    ):
+        self.actuals_path = actuals_path
+        self.locations_path = locations_path
+        self.patterns_path = patterns_path
+        self.terminals_path = terminals_path
+        self.vehicles_path = vehicles_path
+
     # When we download CSV data from Splunk, they like to add a bunch of extra
     # columns that we don't need for this purpose.
     splunk_columns = [
@@ -27,16 +41,14 @@ class Pipeline:
     ]
 
     def load_actuals(self):
-        path = os.path.join("datasets", "pa_datapoints.csv")
-        raw_frame = pd.read_csv(path, dtype={"stop_id": str})
+        raw_frame = pd.read_csv(self.actuals_path, dtype={"stop_id": str})
         dropped_frame = raw_frame \
             .dropna(subset=["time"]).drop(self.splunk_columns, axis=1)
         is_subway = dropped_frame["trip_id"].apply(lambda x: x[0:3] != "CR-")
         return dropped_frame[is_subway].drop_duplicates()
 
     def location_id_to_stop_id(self):
-        path = os.path.join("datasets", "locations.csv")
-        dropped_frame = pd.read_csv(path) \
+        dropped_frame = pd.read_csv(self.locations_path) \
             .drop([
                 "loc_name",
                 "line",
@@ -80,8 +92,7 @@ class Pipeline:
         return acc
 
     def load_patterns(self):
-        path = os.path.join("datasets", "patterns.csv")
-        dropped_frame = pd.read_csv(path) \
+        dropped_frame = pd.read_csv(self.patterns_path) \
             .drop([
                 "reverse_pattern_id",
                 "direction_id",
@@ -116,15 +127,13 @@ class Pipeline:
         return result
 
     def load_terminal_datapoints(self):
-        path = os.path.join("datasets", "terminal_datapoints.csv")
-        raw_frame = pd.read_csv(path, dtype={"terminal_stop_id": str})
-        return raw_frame.drop(
-            self.splunk_columns + ["headway", "terminal_id"], axis=1
+        raw_frame = pd.read_csv(
+            self.terminals_path, dtype={"terminal_stop_id": str}
         )
+        return raw_frame.drop(self.splunk_columns, axis=1)
 
     def load_vehicle_datapoints(self):
-        path = os.path.join("datasets", "vehicle_datapoints.csv")
-        raw_frame = pd.read_csv(path)
+        raw_frame = pd.read_csv(self.vehicles_path)
         terminals = self.gtfs_id_for_terminals()
         frame_with_terminals = pd.merge(
             raw_frame,
@@ -163,13 +172,12 @@ class Pipeline:
         return frame_without_splunk_nonsense.join(n_hot_per_row, how="inner")
 
     def all_locs_sorted(self):
-        loc_path = os.path.join("datasets", "locations.csv")
-        loc_frame = pd.read_csv(loc_path)
+        loc_frame = pd.read_csv(self.locations_path)
         return sorted(loc_frame["loc_id"].__array__())
 
     def n_hot_vehicle_locations_by_generation(self):
-        path = os.path.join("datasets", "vehicle_datapoints.csv")
-        raw_frame = pd.read_csv(path).drop(self.splunk_columns, axis=1)
+        raw_frame = pd.read_csv(self.vehicles_path) \
+            .drop(self.splunk_columns, axis=1)
         grouped_frame = raw_frame.groupby(by="generation")
 
         occupied_locations_by_generation = {}
