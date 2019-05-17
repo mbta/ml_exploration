@@ -68,9 +68,9 @@ class Pipeline():
         is_stop = dropped_frame.apply(lambda x: x != "0")
         stops_only = dropped_frame[is_stop].dropna()
         return functools \
-            .reduce(self.reduce_function, stops_only.__array__(), {})
+            .reduce(self.parent_stop, stops_only.__array__(), {})
 
-    def reduce_function(self, acc, x):
+    def parent_stop(self, acc, x):
         location_id = x[0]
         gtfs_id = x[1]
         parent_stops = {
@@ -227,8 +227,7 @@ class Pipeline():
                 "gtfs_trip_id",
                 "ocs_trip_id",
                 "vehicle_id_x",
-                "vehicle_id_y",
-                "terminal"
+                "vehicle_id_y"
             ],
             axis=1
         )
