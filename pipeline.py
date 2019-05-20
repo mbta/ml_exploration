@@ -14,22 +14,22 @@ class Pipeline():
         patterns_path=os.path.join("datasets", "patterns.csv"),
         terminals_path=os.path.join("datasets", "terminal_datapoints.csv"),
         vehicles_path=os.path.join("datasets", "vehicle_datapoints.csv"),
-        add_actuals=False
+        add_actuals_and_destinations=False
     ):
         self.actuals_path = actuals_path
         self.locations_path = locations_path
         self.patterns_path = patterns_path
         self.terminals_path = terminals_path
         self.vehicles_path = vehicles_path
-        self.add_actuals = add_actuals
+        self.add_actuals_and_destinations = add_actuals_and_destinations
 
     def load(self):
-        results_with_destinations = self._add_all_possible_destinations()
-        if self.add_actuals:
+        if self.add_actuals_and_destinations:
+            results_with_destinations = self._add_all_possible_destinations()
             actuals_adder = ActualsAdder(self.actuals_path)
             return actuals_adder.add_actuals(results_with_destinations)
         else:
-            return results_with_destinations
+            return self._load_vehicle_datapoints()
 
     # Build a dataframe with every combination of given vehicle datapoints
     # and possible destination.
