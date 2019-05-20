@@ -40,74 +40,43 @@ class Pipeline():
         "vendor"
     ]
 
+    # Build a dataframe from prediction analyzer logs, dropping actuals without
+    # times, commuter rail trips, and duplicates (which we get because we log
+    # both from dev-green and prod).
     def load_actuals(self):
-        raw_frame = pd.read_csv(self.actuals_path, dtype={"stop_id": str})
-        dropped_frame = raw_frame \
-            .dropna(subset=["time"]).drop(self.splunk_columns, axis=1)
+        raw_frame = pd.read_csv(
+            self.actuals_path,
+            usecols=['event_type', 'stop_id', 'time', 'trip_id', 'vehicle_id'],
+            dtype={"stop_id": str}
+        )
+        dropped_frame = raw_frame.dropna(subset=["time"])
         is_subway = dropped_frame["trip_id"].apply(lambda x: x[0:3] != "CR-")
         return dropped_frame[is_subway].drop_duplicates()
 
+    # Build a dictionary mapping location IDs to GTFS stop IDs, using parent
+    # stops where child stops exist.
     def location_id_to_stop_id(self):
-        dropped_frame = pd.read_csv(self.locations_path) \
-            .drop([
-                "loc_name",
-                "line",
-                "gtfs_stop_seq",
-                "next_loc_ids",
-                "bearing",
-                "default_rt",
-                "latitude",
-                "longitude",
-                "min_turn_time",
-                "nonrevenue",
-                "tsp_intersection",
-                "tsp_direction",
-                "default_pattern"
-            ], axis=1)
+        dropped_frame = pd.read_csv(
+            self.locations_path,
+            usecols=['loc_id', 'gtfs_stop_id']
+        )
         dropped_frame = dropped_frame.dropna()
         is_stop = dropped_frame.apply(lambda x: x != "0")
         stops_only = dropped_frame[is_stop].dropna()
-        return functools \
-            .reduce(self.parent_stop, stops_only.__array__(), {})
+        return functools.reduce(self._parent_stop, stops_only.__array__(), {})
 
-    def parent_stop(self, acc, x):
-        location_id = x[0]
-        gtfs_id = x[1]
-        parent_stops = {
-            "Alewife-01": "70061",
-            "Alewife-02": "70061",
-            "Braintree-01": "70105",
-            "Braintree-02": "70105",
-            "Forest Hills-01": "70001",
-            "Forest Hills-02": "70001",
-            "Oak Grove-01": "70036",
-            "Oak Grove-02": "70036",
-            "Government Center-Brattle": "70202"
-        }
-        parent_id = parent_stops.get(gtfs_id)
-        if parent_id:
-            gtfs_id = parent_id
-
-        acc[location_id] = gtfs_id
-        return acc
-
+    # Build a dataframe mapping each pattern ID to the corresponding terminal
+    # stop location ID
     def load_patterns(self):
-        dropped_frame = pd.read_csv(self.patterns_path) \
-            .drop([
-                "reverse_pattern_id",
-                "direction_id",
-                "direction_name",
-                "route_id",
-                "ocs_identifiers",
-                "first_stop",
-                "locations",
-                "yard?"
-            ], axis=1) \
-            .dropna()
+        dropped_frame = pd.read_csv(
+            self.patterns_path, usecols=['pattern_id', 'terminal_stop']
+        ).dropna()
         dropped_frame["terminal_stop"] = dropped_frame["terminal_stop"] \
             .apply(lambda str: str.split("|")[0])
         return dropped_frame
 
+    # Build a dataframe mapping each pattern ID to the corresponding terminal
+    # stop GTFS ID
     def gtfs_id_for_terminals(self):
         patterns = self.load_patterns()
         locations = self.location_id_to_stop_id()
@@ -231,3 +200,24 @@ class Pipeline():
             ],
             axis=1
         )
+
+    def _parent_stop(self, acc, x):
+        location_id = x[0]
+        gtfs_id = x[1]
+        parent_stops = {
+            "Alewife-01": "70061",
+            "Alewife-02": "70061",
+            "Braintree-01": "70105",
+            "Braintree-02": "70105",
+            "Forest Hills-01": "70001",
+            "Forest Hills-02": "70001",
+            "Oak Grove-01": "70036",
+            "Oak Grove-02": "70036",
+            "Government Center-Brattle": "70202"
+        }
+        parent_id = parent_stops.get(gtfs_id)
+        if parent_id:
+            gtfs_id = parent_id
+
+        acc[location_id] = gtfs_id
+        return acc
