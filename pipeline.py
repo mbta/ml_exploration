@@ -3,6 +3,8 @@ import os
 import functools
 from collections import defaultdict
 
+from actuals_adder import ActualsAdder
+
 
 class Pipeline():
     def __init__(
@@ -11,13 +13,23 @@ class Pipeline():
         locations_path=os.path.join("datasets", "locations.csv"),
         patterns_path=os.path.join("datasets", "patterns.csv"),
         terminals_path=os.path.join("datasets", "terminal_datapoints.csv"),
-        vehicles_path=os.path.join("datasets", "vehicle_datapoints.csv")
+        vehicles_path=os.path.join("datasets", "vehicle_datapoints.csv"),
+        add_actuals=False
     ):
         self.actuals_path = actuals_path
         self.locations_path = locations_path
         self.patterns_path = patterns_path
         self.terminals_path = terminals_path
         self.vehicles_path = vehicles_path
+        self.add_actuals = add_actuals
+
+    def load(self):
+        results_with_destinations = self._add_all_possible_destinations()
+        if self.add_actuals:
+            actuals_adder = ActualsAdder(self.actuals_path)
+            return actuals_adder.add_actuals(results_with_destinations)
+        else:
+            return results_with_destinations
 
     # Build a dictionary mapping location IDs to GTFS stop IDs, using parent
     # stops where child stops exist.
@@ -197,7 +209,7 @@ class Pipeline():
     # Kendall. Currently these get eliminated in a later step. It might be
     # more efficient to do so up-front here, though we'd then have to have this
     # code know somehow what stops are on what lines.
-    def add_all_possible_destinations(self):
+    def _add_all_possible_destinations(self):
         vehicle_datapoints = self.load_vehicle_datapoints()
         gtfs_ids = set(self.location_id_to_parent_stop_id().values())
         blank_frame = pd.DataFrame()

@@ -13,7 +13,7 @@ class ActualsAdder():
 
     # Join actuals to a set of vehicle datapoints
     def add_actuals(self, vehicle_datapoints):
-        actuals = self.load_actuals()
+        actuals = self._load_actuals()
         actuals = actuals.rename(
             {"trip_id": "gtfs_trip_id", "stop_id": "destination_gtfs_id"},
             axis="columns"
@@ -52,7 +52,7 @@ class ActualsAdder():
     # Build a dataframe from prediction analyzer logs, dropping actuals without
     # times, commuter rail trips, and duplicates (which we get because we log
     # both from dev-green and prod).
-    def load_actuals(self):
+    def _load_actuals(self):
         raw_frame = pd.read_csv(
             self.actuals_path,
             usecols=['event_type', 'stop_id', 'time', 'trip_id', 'vehicle_id'],
