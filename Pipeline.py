@@ -85,6 +85,14 @@ class Pipeline():
         patterns = patterns.dropna().drop("terminal_stop", axis=1)
         return patterns
 
+    # Build a dataframe with every combination of given vehicle datapoints
+    # and possible destination.
+    #
+    # Note that we don't currently check that the destination makes sense, for
+    # example, there will be rows for the Blue Line with a destination of
+    # Kendall. Currently these get eliminated in a later step. It might be
+    # more efficient to do so up-front here, though we'd then have to have this
+    # code know somehow what stops are on what lines.
     def add_all_possible_destinations(self):
         vehicle_datapoints = self.load_vehicle_datapoints()
         gtfs_ids = set(self.location_id_to_stop_id().values())
@@ -95,15 +103,37 @@ class Pipeline():
             result = result.append(new_frame)
         return result
 
+    # Build a dataframe with all logged terminal-mode datapoints
     def load_terminal_datapoints(self):
-        raw_frame = pd.read_csv(
-            self.terminals_path, dtype={"terminal_stop_id": str}
+        return pd.read_csv(
+            self.terminals_path,
+            usecols=[
+                'automatic',
+                'generation',
+                'terminal_stop_id',
+                'timestamp'
+            ],
+            dtype={"terminal_stop_id": str}
         )
-        return raw_frame.drop(self.splunk_columns, axis=1)
 
+    # Build a dataframe with all logged vehicle datapoints
     def load_vehicle_datapoints(self):
-        raw_frame = pd.read_csv(self.vehicles_path)
+        raw_frame = pd.read_csv(
+            self.vehicles_path,
+            usecols=[
+                'current_location_id',
+                'generation',
+                'gtfs_trip_id',
+                'length_of_time_at_current_location',
+                'ocs_trip_id',
+                'offset_departure_seconds_from_now',
+                'pattern_id',
+                'timestamp',
+                'vehicle_id'
+            ]
+        )
         terminals = self.gtfs_id_for_terminals()
+
         frame_with_terminals = pd.merge(
             raw_frame,
             right=terminals,
@@ -117,7 +147,11 @@ class Pipeline():
             left_on=["generation", "terminal_gtfs_id"],
             right_on=["generation", "terminal_stop_id"],
             how="inner"
-        )
+        ).drop(
+            ["terminal_stop_id", "timestamp_y", "pattern_id"],
+            axis=1
+        ).rename({"timestamp_x": "timestamp"}, axis="columns")
+
         n_hot_locations = self.n_hot_vehicle_locations_by_generation()
 
         generations = frame_with_terminal_modes["generation"].to_list()
@@ -131,19 +165,15 @@ class Pipeline():
             n_hot_per_row_list_of_lists,
             columns=self.all_locs_sorted()
         )
-        frame_without_splunk_nonsense = frame_with_terminal_modes.drop(
-            self.splunk_columns + [
-                "terminal_stop_id",
-                "timestamp_y",
-                "pattern_id"
-            ], axis=1
-        ).rename({"timestamp_x": "timestamp"}, axis="columns")
-        return frame_without_splunk_nonsense.join(n_hot_per_row, how="inner")
+        return frame_with_terminal_modes.join(n_hot_per_row, how="inner")
 
+    # Return array of all location IDs in lexicographical order
     def all_locs_sorted(self):
         loc_frame = pd.read_csv(self.locations_path)
         return sorted(loc_frame["loc_id"].__array__())
 
+    # Builds a map of generations to the list of n-hot encoded vehicle
+    # positions for that generation.
     def n_hot_vehicle_locations_by_generation(self):
         raw_frame = pd.read_csv(self.vehicles_path) \
             .drop(self.splunk_columns, axis=1)
@@ -178,15 +208,17 @@ class Pipeline():
 
         return generational_n_hot_location_lists
 
-    def add_actuals(self, predictions):
+    # Join actuals to a set of vehicle datapoints
+    def add_actuals(self, vehicle_datapoints):
         actuals = self.load_actuals()
         actuals = actuals.rename(
             {"trip_id": "gtfs_trip_id", "stop_id": "destination_gtfs_id"},
             axis="columns"
         )
         actuals["gtfs_trip_id"] = actuals["gtfs_trip_id"].astype(str)
-        predictions["gtfs_trip_id"] = predictions["gtfs_trip_id"].astype(str)
-        return predictions.merge(
+        vehicle_datapoints["gtfs_trip_id"] = \
+            vehicle_datapoints["gtfs_trip_id"].astype(str)
+        return vehicle_datapoints.merge(
             actuals,
             how="inner",
             on=["gtfs_trip_id", "destination_gtfs_id"]
