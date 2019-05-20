@@ -19,27 +19,6 @@ class Pipeline():
         self.terminals_path = terminals_path
         self.vehicles_path = vehicles_path
 
-    # When we download CSV data from Splunk, they like to add a bunch of extra
-    # columns that we don't need for this purpose.
-    splunk_columns = [
-        "_raw",
-        "_time",
-        "app",
-        "eventtype",
-        "host",
-        "index",
-        "linecount",
-        "product",
-        "punct",
-        "sourcetype",
-        "splunk_server",
-        "splunk_server_group",
-        "source",
-        "tag",
-        "tag::eventtype",
-        "vendor"
-    ]
-
     # Build a dataframe from prediction analyzer logs, dropping actuals without
     # times, commuter rail trips, and duplicates (which we get because we log
     # both from dev-green and prod).
@@ -187,8 +166,20 @@ class Pipeline():
     # Builds a map of generations to the list of n-hot encoded vehicle
     # positions for that generation.
     def n_hot_vehicle_locations_by_generation(self):
-        raw_frame = pd.read_csv(self.vehicles_path) \
-            .drop(self.splunk_columns, axis=1)
+        raw_frame = pd.read_csv(
+            self.vehicles_path,
+            usecols=[
+                'current_location_id',
+                'generation',
+                'gtfs_trip_id',
+                'length_of_time_at_current_location',
+                'ocs_trip_id',
+                'offset_departure_seconds_from_now',
+                'pattern_id',
+                'timestamp',
+                'vehicle_id'
+            ]
+        )
         grouped_frame = raw_frame.groupby(by="generation")
 
         occupied_locations_by_generation = {}
