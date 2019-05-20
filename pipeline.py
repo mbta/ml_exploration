@@ -31,21 +31,45 @@ class Pipeline():
         else:
             return results_with_destinations
 
-    # Build a dictionary mapping location IDs to GTFS stop IDs, using parent
-    # stops where child stops exist.
-    def location_id_to_parent_stop_id(self):
-        dropped_frame = pd.read_csv(
-            self.locations_path,
-            usecols=['loc_id', 'gtfs_stop_id']
+    # Build a dataframe with every combination of given vehicle datapoints
+    # and possible destination.
+    #
+    # Note that we don't currently check that the destination makes sense, for
+    # example, there will be rows for the Blue Line with a destination of
+    # Kendall. Currently these get eliminated in a later step. It might be
+    # more efficient to do so up-front here, though we'd then have to have this
+    # code know somehow what stops are on what lines.
+    def _add_all_possible_destinations(self):
+        vehicle_datapoints = self._load_vehicle_datapoints()
+        gtfs_ids = set(self._location_id_to_parent_stop_id().values())
+        blank_frame = pd.DataFrame()
+        new_frames = map(
+            lambda gtfs_id: self._vehicle_datapoints_with_destination_gtfs_id(
+                vehicle_datapoints,
+                gtfs_id
+            ),
+            gtfs_ids
         )
-        dropped_frame = dropped_frame.dropna()
-        is_stop = dropped_frame.apply(lambda x: x != "0")
-        stops_only = dropped_frame[is_stop].dropna()
-        return functools.reduce(self._parent_stop, stops_only.__array__(), {})
+        return blank_frame.append(list(new_frames))
+
+    # Return array of all location IDs in lexicographical order
+    def _all_locs_sorted(self):
+        loc_frame = pd.read_csv(self.locations_path)
+        return sorted(loc_frame["loc_id"].__array__())
+
+    # Build a dataframe mapping each pattern ID to the corresponding terminal
+    # stop GTFS ID
+    def _gtfs_id_for_terminals(self):
+        patterns = self._load_patterns()
+        locations = self._location_id_to_parent_stop_id()
+        patterns["terminal_gtfs_id"] = patterns["terminal_stop"] \
+            .apply(lambda loc_id: locations.get(loc_id))
+        patterns = patterns.dropna().drop("terminal_stop", axis=1)
+        return patterns
 
     # Build a dataframe mapping each pattern ID to the corresponding terminal
     # stop location ID
-    def load_patterns(self):
+    def _load_patterns(self):
         dropped_frame = pd.read_csv(
             self.patterns_path, usecols=['pattern_id', 'terminal_stop']
         ).dropna()
@@ -53,18 +77,8 @@ class Pipeline():
             .apply(lambda str: str.split("|")[0])
         return dropped_frame
 
-    # Build a dataframe mapping each pattern ID to the corresponding terminal
-    # stop GTFS ID
-    def gtfs_id_for_terminals(self):
-        patterns = self.load_patterns()
-        locations = self.location_id_to_parent_stop_id()
-        patterns["terminal_gtfs_id"] = patterns["terminal_stop"] \
-            .apply(lambda loc_id: locations.get(loc_id))
-        patterns = patterns.dropna().drop("terminal_stop", axis=1)
-        return patterns
-
     # Build a dataframe with all logged terminal-mode datapoints
-    def load_terminal_datapoints(self):
+    def _load_terminal_datapoints(self):
         return pd.read_csv(
             self.terminals_path,
             usecols=[
@@ -77,7 +91,7 @@ class Pipeline():
         )
 
     # Build a dataframe with all logged vehicle datapoints
-    def load_vehicle_datapoints(self):
+    def _load_vehicle_datapoints(self):
         raw_frame = pd.read_csv(
             self.vehicles_path,
             usecols=[
@@ -92,7 +106,7 @@ class Pipeline():
                 'vehicle_id'
             ]
         )
-        terminals = self.gtfs_id_for_terminals()
+        terminals = self._gtfs_id_for_terminals()
 
         frame_with_terminals = pd.merge(
             raw_frame,
@@ -103,7 +117,7 @@ class Pipeline():
         )
         frame_with_terminal_modes = pd.merge(
             frame_with_terminals,
-            right=self.load_terminal_datapoints(),
+            right=self._load_terminal_datapoints(),
             left_on=["generation", "terminal_gtfs_id"],
             right_on=["generation", "terminal_stop_id"],
             how="inner"
@@ -112,7 +126,7 @@ class Pipeline():
             axis=1
         ).rename({"timestamp_x": "timestamp"}, axis="columns")
 
-        n_hot_locations = self.n_hot_vehicle_locations_by_generation()
+        n_hot_locations = self._n_hot_vehicle_locations_by_generation()
 
         generations = frame_with_terminal_modes["generation"].to_list()
 
@@ -123,18 +137,25 @@ class Pipeline():
         )
         n_hot_per_row = pd.DataFrame(
             n_hot_per_row_list_of_lists,
-            columns=self.all_locs_sorted()
+            columns=self._all_locs_sorted()
         )
         return frame_with_terminal_modes.join(n_hot_per_row, how="inner")
 
-    # Return array of all location IDs in lexicographical order
-    def all_locs_sorted(self):
-        loc_frame = pd.read_csv(self.locations_path)
-        return sorted(loc_frame["loc_id"].__array__())
+    # Build a dictionary mapping location IDs to GTFS stop IDs, using parent
+    # stops where child stops exist.
+    def _location_id_to_parent_stop_id(self):
+        dropped_frame = pd.read_csv(
+            self.locations_path,
+            usecols=['loc_id', 'gtfs_stop_id']
+        )
+        dropped_frame = dropped_frame.dropna()
+        is_stop = dropped_frame.apply(lambda x: x != "0")
+        stops_only = dropped_frame[is_stop].dropna()
+        return functools.reduce(self._parent_stop, stops_only.__array__(), {})
 
     # Builds a map of generations to the list of n-hot encoded vehicle
     # positions for that generation.
-    def n_hot_vehicle_locations_by_generation(self):
+    def _n_hot_vehicle_locations_by_generation(self):
         raw_frame = pd.read_csv(
             self.vehicles_path,
             usecols=[
@@ -174,7 +195,7 @@ class Pipeline():
         for generation in generational_n_hot_locations:
             location_map = generational_n_hot_locations[generation]
             n_hot_columns = []
-            for location in self.all_locs_sorted():
+            for location in self._all_locs_sorted():
                 n_hot_columns.append(location_map[location])
                 generational_n_hot_location_lists[generation] = n_hot_columns
 
@@ -200,27 +221,6 @@ class Pipeline():
 
         acc[location_id] = gtfs_id
         return acc
-
-    # Build a dataframe with every combination of given vehicle datapoints
-    # and possible destination.
-    #
-    # Note that we don't currently check that the destination makes sense, for
-    # example, there will be rows for the Blue Line with a destination of
-    # Kendall. Currently these get eliminated in a later step. It might be
-    # more efficient to do so up-front here, though we'd then have to have this
-    # code know somehow what stops are on what lines.
-    def _add_all_possible_destinations(self):
-        vehicle_datapoints = self.load_vehicle_datapoints()
-        gtfs_ids = set(self.location_id_to_parent_stop_id().values())
-        blank_frame = pd.DataFrame()
-        new_frames = map(
-            lambda gtfs_id: self._vehicle_datapoints_with_destination_gtfs_id(
-                vehicle_datapoints,
-                gtfs_id
-            ),
-            gtfs_ids
-        )
-        return blank_frame.append(list(new_frames))
 
     def _vehicle_datapoints_with_destination_gtfs_id(
         self,
