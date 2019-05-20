@@ -96,12 +96,24 @@ class Pipeline():
     def add_all_possible_destinations(self):
         vehicle_datapoints = self.load_vehicle_datapoints()
         gtfs_ids = set(self.location_id_to_stop_id().values())
-        result = pd.DataFrame()
-        for gtfs in gtfs_ids:
-            new_frame = vehicle_datapoints.copy()
-            new_frame["destination_gtfs_id"] = str(gtfs)
-            result = result.append(new_frame)
-        return result
+        blank_frame = pd.DataFrame()
+        new_frames = map(
+            lambda gtfs_id: self._vehicle_datapoints_with_destination_gtfs_id(
+                vehicle_datapoints,
+                gtfs_id
+            ),
+            gtfs_ids
+        )
+        return blank_frame.append(list(new_frames))
+
+    def _vehicle_datapoints_with_destination_gtfs_id(
+        self,
+        vehicle_datapoints,
+        gtfs_id
+    ):
+        new_frame = vehicle_datapoints.copy()
+        new_frame["destination_gtfs_id"] = str(gtfs_id)
+        return new_frame
 
     # Build a dataframe with all logged terminal-mode datapoints
     def load_terminal_datapoints(self):
