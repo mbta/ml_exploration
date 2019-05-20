@@ -6,7 +6,7 @@ from collections import defaultdict
 from actuals_adder import ActualsAdder
 
 
-class Pipeline():
+class SubwayPipeline():
     def __init__(
         self,
         actuals_path=os.path.join("datasets", "pa_datapoints.csv"),
