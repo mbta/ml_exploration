@@ -13,23 +13,19 @@ class SubwayPipeline():
         locations_path=os.path.join("datasets", "locations.csv"),
         patterns_path=os.path.join("datasets", "patterns.csv"),
         terminals_path=os.path.join("datasets", "terminal_datapoints.csv"),
-        vehicles_path=os.path.join("datasets", "vehicle_datapoints.csv"),
-        add_actuals_and_destinations=False
+        vehicles_path=os.path.join("datasets", "vehicle_datapoints.csv")
     ):
         self.actuals_path = actuals_path
         self.locations_path = locations_path
         self.patterns_path = patterns_path
         self.terminals_path = terminals_path
         self.vehicles_path = vehicles_path
-        self.add_actuals_and_destinations = add_actuals_and_destinations
 
     def load(self):
-        if self.add_actuals_and_destinations:
-            results_with_destinations = self._add_all_possible_destinations()
-            actuals_adder = ActualsAdder(self.actuals_path)
-            return actuals_adder.add_actuals(results_with_destinations)
-        else:
-            return self._load_vehicle_datapoints()
+        results_with_destinations = self._add_all_possible_destinations()
+        actuals_adder = ActualsAdder(self.actuals_path)
+        datapoints = actuals_adder.add_actuals(results_with_destinations)
+        return datapoints.dropna()
 
     # Build a dataframe with every combination of given vehicle datapoints
     # and possible destination.
