@@ -1,9 +1,10 @@
 import pandas as pd
 import os
-import functools
 from collections import defaultdict
 
 from actuals_adder import ActualsAdder
+from destinations_adder import DestinationsAdder
+from location_id_translator import LocationIdTranslator
 
 
 class SubwayPipeline():
@@ -22,31 +23,14 @@ class SubwayPipeline():
         self.vehicles_path = vehicles_path
 
     def load(self):
-        results_with_destinations = self._add_all_possible_destinations()
+        vehicle_datapoints = self._load_vehicle_datapoints()
+        destinations_adder = DestinationsAdder(self.locations_path)
+        results_with_destinations = destinations_adder.fit_transform(
+            vehicle_datapoints
+        )
         actuals_adder = ActualsAdder(self.actuals_path)
         datapoints = actuals_adder.fit_transform(results_with_destinations)
         return datapoints.dropna()
-
-    # Build a dataframe with every combination of given vehicle datapoints
-    # and possible destination.
-    #
-    # Note that we don't currently check that the destination makes sense, for
-    # example, there will be rows for the Blue Line with a destination of
-    # Kendall. Currently these get eliminated in a later step. It might be
-    # more efficient to do so up-front here, though we'd then have to have this
-    # code know somehow what stops are on what lines.
-    def _add_all_possible_destinations(self):
-        vehicle_datapoints = self._load_vehicle_datapoints()
-        gtfs_ids = set(self._location_id_to_parent_stop_id().values())
-        blank_frame = pd.DataFrame()
-        new_frames = map(
-            lambda gtfs_id: self._vehicle_datapoints_with_destination_gtfs_id(
-                vehicle_datapoints,
-                gtfs_id
-            ),
-            gtfs_ids
-        )
-        return blank_frame.append(list(new_frames))
 
     # Return array of all location IDs in lexicographical order
     def _all_locs_sorted(self):
@@ -57,7 +41,7 @@ class SubwayPipeline():
     # stop GTFS ID
     def _gtfs_id_for_terminals(self):
         patterns = self._load_patterns()
-        locations = self._location_id_to_parent_stop_id()
+        locations = LocationIdTranslator(self.locations_path)
         patterns["terminal_gtfs_id"] = patterns["terminal_stop"] \
             .apply(lambda loc_id: locations.get(loc_id))
         patterns = patterns.dropna().drop("terminal_stop", axis=1)
@@ -137,18 +121,6 @@ class SubwayPipeline():
         )
         return frame_with_terminal_modes.join(n_hot_per_row, how="inner")
 
-    # Build a dictionary mapping location IDs to GTFS stop IDs, using parent
-    # stops where child stops exist.
-    def _location_id_to_parent_stop_id(self):
-        dropped_frame = pd.read_csv(
-            self.locations_path,
-            usecols=['loc_id', 'gtfs_stop_id']
-        )
-        dropped_frame = dropped_frame.dropna()
-        is_stop = dropped_frame.apply(lambda x: x != "0")
-        stops_only = dropped_frame[is_stop].dropna()
-        return functools.reduce(self._parent_stop, stops_only.__array__(), {})
-
     # Builds a map of generations to the list of n-hot encoded vehicle
     # positions for that generation.
     def _n_hot_vehicle_locations_by_generation(self):
@@ -196,33 +168,3 @@ class SubwayPipeline():
                 generational_n_hot_location_lists[generation] = n_hot_columns
 
         return generational_n_hot_location_lists
-
-    def _parent_stop(self, acc, x):
-        location_id = x[0]
-        gtfs_id = x[1]
-        parent_stops = {
-            "Alewife-01": "70061",
-            "Alewife-02": "70061",
-            "Braintree-01": "70105",
-            "Braintree-02": "70105",
-            "Forest Hills-01": "70001",
-            "Forest Hills-02": "70001",
-            "Oak Grove-01": "70036",
-            "Oak Grove-02": "70036",
-            "Government Center-Brattle": "70202"
-        }
-        parent_id = parent_stops.get(gtfs_id)
-        if parent_id:
-            gtfs_id = parent_id
-
-        acc[location_id] = gtfs_id
-        return acc
-
-    def _vehicle_datapoints_with_destination_gtfs_id(
-        self,
-        vehicle_datapoints,
-        gtfs_id
-    ):
-        new_frame = vehicle_datapoints.copy()
-        new_frame["destination_gtfs_id"] = str(gtfs_id)
-        return new_frame
