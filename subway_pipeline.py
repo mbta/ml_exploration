@@ -24,7 +24,7 @@ class SubwayPipeline():
     def load(self):
         results_with_destinations = self._add_all_possible_destinations()
         actuals_adder = ActualsAdder(self.actuals_path)
-        datapoints = actuals_adder.add_actuals(results_with_destinations)
+        datapoints = actuals_adder.fit_transform(results_with_destinations)
         return datapoints.dropna()
 
     # Build a dataframe with every combination of given vehicle datapoints

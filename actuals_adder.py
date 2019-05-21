@@ -3,16 +3,20 @@ import os
 import pandas as pd
 import pytz
 
+from sklearn.base import BaseEstimator, TransformerMixin
 
-class ActualsAdder():
+class ActualsAdder(BaseEstimator, TransformerMixin):
     def __init__(
         self,
         actuals_path=os.path.join("datasets", "pa_datapoints.csv")
     ):
         self.actuals_path = actuals_path
 
+    def fit(self, X, y=None):
+        return self
+
     # Join actuals to a set of vehicle datapoints
-    def add_actuals(self, vehicle_datapoints):
+    def transform(self, vehicle_datapoints, y=None):
         actuals = self._load_actuals()
         actuals = actuals.rename(
             {"trip_id": "gtfs_trip_id", "stop_id": "destination_gtfs_id"},
