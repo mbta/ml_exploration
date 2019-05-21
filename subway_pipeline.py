@@ -1,5 +1,6 @@
 import pandas as pd
 import os
+from sklearn.pipeline import Pipeline
 
 from actuals_adder import ActualsAdder
 from destinations_adder import DestinationsAdder
@@ -30,23 +31,17 @@ class SubwayPipeline():
             self.patterns_path,
             self.terminals_path
         )
-        datapoints_with_terminal_modes = terminal_modes_adder.fit_transform(
-            vehicle_datapoints
-        )
-
         locations_adder = LocationsAdder(self.locations_path)
-        datapoints_with_locations = locations_adder.fit_transform(
-            datapoints_with_terminal_modes
-        )
-
         destinations_adder = DestinationsAdder(self.locations_path)
-        results_with_destinations = destinations_adder.fit_transform(
-            datapoints_with_locations
-        )
-
         actuals_adder = ActualsAdder(self.actuals_path)
-        datapoints = actuals_adder.fit_transform(results_with_destinations)
-        return datapoints.dropna()
+
+        pipeline = Pipeline([
+            ('terminal_modes_adder', terminal_modes_adder),
+            ('locations_adder', locations_adder),
+            ('destinations_adder', destinations_adder),
+            ('actuals_adder', actuals_adder)
+        ])
+        return pipeline.fit_transform(vehicle_datapoints).dropna()
 
     # Build a dataframe with all logged vehicle datapoints
     def _load_vehicle_datapoints(self):
