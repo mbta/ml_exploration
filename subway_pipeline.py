@@ -1,6 +1,8 @@
 import pandas as pd
 import os
+from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 from actuals_adder import ActualsAdder
 from destinations_adder import DestinationsAdder
@@ -34,14 +36,26 @@ class SubwayPipeline():
         locations_adder = LocationsAdder(self.locations_path)
         destinations_adder = DestinationsAdder(self.locations_path)
         actuals_adder = ActualsAdder(self.actuals_path)
+        onehot_columns = [
+            'current_location_id',
+            'terminal_gtfs_id',
+            'automatic',
+            'destination_gtfs_id',
+            'event_type'
+        ]
+        column_transformer = ColumnTransformer([
+            ('1hot', OneHotEncoder(), onehot_columns)
+        ], remainder="passthrough")
 
         pipeline = Pipeline([
             ('terminal_modes_adder', terminal_modes_adder),
             ('locations_adder', locations_adder),
             ('destinations_adder', destinations_adder),
-            ('actuals_adder', actuals_adder)
+            ('actuals_adder', actuals_adder),
+            ('col_transformer', column_transformer),
+            ('std_scaler', StandardScaler())
         ])
-        return pipeline.fit_transform(vehicle_datapoints).dropna()
+        return pipeline.fit_transform(vehicle_datapoints)
 
     # Build a dataframe with all logged vehicle datapoints
     def _load_vehicle_datapoints(self):

@@ -51,7 +51,7 @@ class ActualsAdder(BaseEstimator, TransformerMixin):
             merged_frame["time"] - merged_frame["timestamp"]
         merged_frame = merged_frame.drop(["timestamp", "time"], axis=1)
 
-        return merged_frame
+        return merged_frame.dropna()
 
     # Build a dataframe from prediction analyzer logs, dropping actuals without
     # times, commuter rail trips, and duplicates (which we get because we log
