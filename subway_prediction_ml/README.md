@@ -1,3 +1,20 @@
+# Necessary files
+Five files are needed to create a data set:
+
+  * `locations.csv` from RTR
+  * `patterns.csv` also from RTR
+  * a CSV export of actuals, gotten from Splunk query `index="prediction-analyzer-dev" ml_datapoint` over a given time period
+  * a CSV export of vehicle position datapoints, gotten from Splunk query `index="rtr-prod" vehicle_datapoint` over a given time period
+  * a CSV export of terminal mode datapoints, gotten from Splunk query `index="rtr-prod" terminal_datapoint` over a given time period
+
+The time period should be identical for the latter three files.
+
+Default paths for these files are illustrated below in the example.
+
+# Example
+
+The main entry point to this module is `SubwayPipeline.load`:
+
 ```
 $ python3
 >>> from subway_pipeline import SubwayPipeline
