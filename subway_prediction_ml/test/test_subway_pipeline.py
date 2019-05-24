@@ -1,11 +1,33 @@
+import numpy as np
 import os
+import sklearn
 import sys
+import unittest
 
 sys.path.append(os.path.abspath(os.path.join(__file__, '..', '..')))
 from subway_pipeline import SubwayPipeline
 
 
-class TestSubwayPipeline(object):
+class TestSubwayPipeline(unittest.TestCase):
+    def setUp(self):
+        # In theory the unittest.mock library allows you to mock out an
+        # instance method on all instances of a given class, but I haven't been
+        # able to get it to work. In this test, we want a mock StandardScaler
+        # because the effects of that scaler are difficult to calculate and
+        # it's a standard (and hopefully well-tested) component already. Hence
+        # the monkeypatch, which we'll have to undo later.
+
+        self.original_scaler_method = \
+            sklearn.preprocessing.StandardScaler.fit_transform
+        sklearn.preprocessing.StandardScaler.fit_transform = (
+            lambda self, X, y=None: X
+        )
+
+    def tearDown(self):
+        sklearn.preprocessing.StandardScaler.fit_transform = \
+            self.original_scaler_method
+
+
     def test_load(self):
         p = SubwayPipeline(
             actuals_path=self._fixture_path('pa_datapoints.csv'),
@@ -14,8 +36,19 @@ class TestSubwayPipeline(object):
             terminals_path=self._fixture_path('terminal_datapoints.csv'),
             vehicles_path=self._fixture_path('vehicle_datapoints.csv')
         )
-        print(p.load())
-        assert 2 + 2 == 5
+        sorted_result = sorted(p.load().tolist())
+        print(sorted_result)
+        assert sorted_result == [
+            [0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 22.0, 1750.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, -43.38234901428223],
+            [0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 22.0, 1750.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, -42.38234901428223],
+            [0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 22.0, 1750.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, -22.382349014282227],
+            [0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 23.0, 1749.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, -43.38234901428223],
+            [0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 23.0, 1749.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, -42.38234901428223],
+            [0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 23.0, 1749.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, -22.382349014282227],
+            [0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 3.0, 429.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, -20.382349014282227],
+            [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 430.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, -20.382349014282227]
+        ]
+
 
     def _fixture_path(self, filename):
         return os.path.abspath(
