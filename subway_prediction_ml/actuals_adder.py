@@ -51,6 +51,7 @@ class ActualsAdder(BaseEstimator, TransformerMixin):
         merged_frame["actual_seconds_from_now"] = \
             merged_frame["time"] - merged_frame["timestamp"]
         merged_frame = merged_frame.drop(["timestamp", "time"], axis=1)
+        merged_frame = merged_frame.query("actual_seconds_from_now > 0")
 
         return merged_frame.dropna()
 
