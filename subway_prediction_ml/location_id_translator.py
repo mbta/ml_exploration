@@ -15,13 +15,11 @@ class LocationIdTranslator:
         return self._translation_dict.get(loc_id)
 
     def _build_translation_dict(self, locations_path):
-        dropped_frame = pd.read_csv(
+        frame = pd.read_csv(
             locations_path,
             usecols=['loc_id', 'gtfs_stop_id']
         )
-        dropped_frame = dropped_frame.dropna()
-        is_stop = dropped_frame.apply(lambda x: x != "0")
-        stops_only = dropped_frame[is_stop].dropna()
+        stops_only = frame.query("gtfs_stop_id != '0'")
         return functools.reduce(self._parent_stop, stops_only.__array__(), {})
 
     def _parent_stop(self, acc, x):
