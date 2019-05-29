@@ -1,4 +1,3 @@
-import functools
 import pandas as pd
 
 # Converts a location ID to the GTFS ID of the appropriate parent stop
@@ -19,12 +18,15 @@ class LocationIdTranslator:
             locations_path,
             usecols=['loc_id', 'gtfs_stop_id']
         )
-        stops_only = frame.query("gtfs_stop_id != '0'")
-        return functools.reduce(self._parent_stop, stops_only.__array__(), {})
+        stops_only = frame. \
+            dropna(subset=['gtfs_stop_id']). \
+            query("gtfs_stop_id != '0'")
+        stops_only.loc[:, 'gtfs_stop_id'] = stops_only['gtfs_stop_id'].map(
+            self._parent_stop
+        )
+        return dict(zip(stops_only.loc_id, stops_only.gtfs_stop_id))
 
-    def _parent_stop(self, acc, x):
-        location_id = x[0]
-        gtfs_id = x[1]
+    def _parent_stop(self, stop_id):
         parent_stops = {
             "Alewife-01": "70061",
             "Alewife-02": "70061",
@@ -36,9 +38,4 @@ class LocationIdTranslator:
             "Oak Grove-02": "70036",
             "Government Center-Brattle": "70202"
         }
-        parent_id = parent_stops.get(gtfs_id)
-        if parent_id:
-            gtfs_id = parent_id
-
-        acc[location_id] = gtfs_id
-        return acc
+        return parent_stops.get(stop_id) or stop_id
