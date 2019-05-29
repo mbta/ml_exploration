@@ -19,23 +19,24 @@ class SubwayPipeline():
         terminals_path=os.path.join("datasets", "terminal_datapoints.csv"),
         vehicles_path=os.path.join("datasets", "vehicle_datapoints.csv")
     ):
-        self.actuals_path = actuals_path
-        self.locations_path = locations_path
-        self.patterns_path = patterns_path
-        self.terminals_path = terminals_path
         self.vehicles_path = vehicles_path
+
+        self.actuals_frame = pd.read_csv(actuals_path)
+        self.locations_frame = pd.read_csv(locations_path)
+        self.patterns_frame = pd.read_csv(patterns_path)
+        self.terminals_frame = pd.read_csv(terminals_path)
 
     def load(self):
         vehicle_datapoints = self._load_vehicle_datapoints()
 
         terminal_modes_adder = TerminalModesAdder(
-            self.locations_path,
-            self.patterns_path,
-            self.terminals_path
+            self.locations_frame,
+            self.patterns_frame,
+            self.terminals_frame
         )
-        locations_adder = LocationsAdder(self.locations_path)
-        destinations_adder = DestinationsAdder(self.locations_path)
-        actuals_adder = ActualsAdder(self.actuals_path)
+        locations_adder = LocationsAdder(self.locations_frame)
+        destinations_adder = DestinationsAdder(self.locations_frame)
+        actuals_adder = ActualsAdder(self.actuals_frame)
         onehot_columns = [
             'current_location_id',
             'terminal_gtfs_id',

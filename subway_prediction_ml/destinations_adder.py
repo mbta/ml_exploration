@@ -14,14 +14,14 @@ from location_id_translator import LocationIdTranslator
 # code know somehow what stops are on what lines.
 
 class DestinationsAdder(BaseEstimator, TransformerMixin):
-    def __init__(self, locations_path):
-        self.locations_path = locations_path
+    def __init__(self, locations_frame):
+        self.locations_frame = locations_frame
 
     def fit(self, X, y=None):
         return self
 
     def transform(self, vehicle_datapoints, y=None):
-        gtfs_ids = LocationIdTranslator(self.locations_path).all_translated()
+        gtfs_ids = LocationIdTranslator(self.locations_frame).all_translated()
         blank_frame = pd.DataFrame()
         new_frames = map(
             lambda gtfs_id: self._vehicle_datapoints_with_destination_gtfs_id(

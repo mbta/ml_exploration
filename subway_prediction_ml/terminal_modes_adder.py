@@ -5,10 +5,10 @@ from location_id_translator import LocationIdTranslator
 
 
 class TerminalModesAdder(BaseEstimator, TransformerMixin):
-    def __init__(self, locations_path, patterns_path, terminals_path):
-        self.locations_path = locations_path
-        self.patterns_path = patterns_path
-        self.terminals_path = terminals_path
+    def __init__(self, locations_frame, patterns_frame, terminals_frame):
+        self.locations_frame = locations_frame
+        self.patterns_frame = patterns_frame
+        self.terminals_frame = terminals_frame
 
     def fit(self, vehicle_datapoints, y=None):
         return self
@@ -39,7 +39,7 @@ class TerminalModesAdder(BaseEstimator, TransformerMixin):
     # stop GTFS ID
     def _gtfs_id_for_terminals(self):
         patterns = self._load_patterns()
-        locations = LocationIdTranslator(self.locations_path)
+        locations = LocationIdTranslator(self.locations_frame)
         patterns["terminal_gtfs_id"] = patterns["terminal_stop"] \
             .apply(lambda loc_id: locations.get(loc_id))
         patterns = patterns.dropna().drop("terminal_stop", axis=1)
@@ -48,22 +48,22 @@ class TerminalModesAdder(BaseEstimator, TransformerMixin):
     # Build a dataframe mapping each pattern ID to the corresponding terminal
     # stop location ID
     def _load_patterns(self):
-        dropped_frame = pd.read_csv(
-            self.patterns_path, usecols=['pattern_id', 'terminal_stop']
-        ).dropna()
+        dropped_frame = self. \
+            patterns_frame. \
+            filter(['pattern_id', 'terminal_stop'], axis=1). \
+            dropna()
         dropped_frame["terminal_stop"] = dropped_frame["terminal_stop"] \
             .apply(lambda str: str.split("|")[0])
         return dropped_frame
 
     # Build a dataframe with all logged terminal-mode datapoints
     def _load_terminal_datapoints(self):
-        return pd.read_csv(
-            self.terminals_path,
-            usecols=[
-                'automatic',
-                'generation',
-                'terminal_stop_id',
-                'timestamp'
-            ],
-            dtype={"terminal_stop_id": str}
-        )
+        filtered_terminals_frame = self.terminals_frame.filter([
+            'automatic',
+            'generation',
+            'terminal_stop_id',
+            'timestamp'
+        ], axis=1)
+        filtered_terminals_frame['terminal_stop_id'] = \
+            filtered_terminals_frame['terminal_stop_id'].astype('str')
+        return filtered_terminals_frame

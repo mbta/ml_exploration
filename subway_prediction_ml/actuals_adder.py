@@ -1,17 +1,12 @@
 import datetime
-import os
-import pandas as pd
 import pytz
 
 from sklearn.base import BaseEstimator, TransformerMixin
 
 
 class ActualsAdder(BaseEstimator, TransformerMixin):
-    def __init__(
-        self,
-        actuals_path=os.path.join("datasets", "pa_datapoints.csv")
-    ):
-        self.actuals_path = actuals_path
+    def __init__(self, actuals_frame):
+        self.actuals_frame = actuals_frame
 
     def fit(self, X, y=None):
         return self
@@ -59,11 +54,11 @@ class ActualsAdder(BaseEstimator, TransformerMixin):
     # times, commuter rail trips, and duplicates (which we get because we log
     # both from dev-green and prod).
     def _load_actuals(self):
-        raw_frame = pd.read_csv(
-            self.actuals_path,
-            usecols=['event_type', 'stop_id', 'time', 'trip_id', 'vehicle_id'],
-            dtype={"stop_id": str}
+        raw_frame = self.actuals_frame.filter(
+            ['event_type', 'stop_id', 'time', 'trip_id', 'vehicle_id'],
+            axis=1
         )
+        raw_frame['stop_id'] = raw_frame['stop_id'].astype('str')
         dropped_frame = raw_frame.dropna(subset=["time"])
         is_subway = dropped_frame["trip_id"].apply(lambda x: x[0:3] != "CR-")
         return dropped_frame[is_subway].drop_duplicates()

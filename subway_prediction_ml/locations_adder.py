@@ -4,8 +4,8 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 
 class LocationsAdder(BaseEstimator, TransformerMixin):
-    def __init__(self, locations_path):
-        self.locations_path = locations_path
+    def __init__(self, locations_frame):
+        self.locations_frame = locations_frame
 
     def fit(self, vehicle_datapoints, y=None):
         return self
@@ -30,8 +30,7 @@ class LocationsAdder(BaseEstimator, TransformerMixin):
 
     # Return array of all location IDs in lexicographical order
     def _all_locs_sorted(self):
-        loc_frame = pd.read_csv(self.locations_path)
-        return sorted(loc_frame["loc_id"].__array__())
+        return sorted(self.locations_frame["loc_id"].__array__())
 
     # Builds a map of generations to the list of n-hot encoded vehicle
     # positions for that generation.

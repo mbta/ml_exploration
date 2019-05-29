@@ -1,11 +1,9 @@
-import pandas as pd
-
 # Converts a location ID to the GTFS ID of the appropriate parent stop
 
 
 class LocationIdTranslator:
-    def __init__(self, locations_path):
-        self._translation_dict = self._build_translation_dict(locations_path)
+    def __init__(self, locations_frame):
+        self._translation_dict = self._build_translation_dict(locations_frame)
 
     def all_translated(self):
         return set(self._translation_dict.values())
@@ -13,12 +11,8 @@ class LocationIdTranslator:
     def get(self, loc_id):
         return self._translation_dict.get(loc_id)
 
-    def _build_translation_dict(self, locations_path):
-        frame = pd.read_csv(
-            locations_path,
-            usecols=['loc_id', 'gtfs_stop_id']
-        )
-        stops_only = frame. \
+    def _build_translation_dict(self, locations_frame):
+        stops_only = locations_frame. \
             dropna(subset=['gtfs_stop_id']). \
             query("gtfs_stop_id != '0'")
         stops_only.loc[:, 'gtfs_stop_id'] = stops_only['gtfs_stop_id'].map(
