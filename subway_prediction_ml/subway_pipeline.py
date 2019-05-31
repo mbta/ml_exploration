@@ -8,6 +8,7 @@ from actuals_adder import ActualsAdder
 from destinations_adder import DestinationsAdder
 from locations_adder import LocationsAdder
 from offset_seconds_encoder import OffsetSecondsEncoder
+from route_filter import RouteFilter
 from terminal_modes_adder import TerminalModesAdder
 
 
@@ -30,6 +31,7 @@ class SubwayPipeline():
     def load(self):
         vehicle_datapoints = self._load_vehicle_datapoints()
 
+        route_filter = RouteFilter('B')
         offset_seconds_encoder = OffsetSecondsEncoder()
         terminal_modes_adder = TerminalModesAdder(
             self.locations_frame,
@@ -77,6 +79,7 @@ class SubwayPipeline():
         ], remainder="passthrough")
 
         pipeline = Pipeline([
+            ('route_filter', route_filter),
             ('offset_seconds_encoder', offset_seconds_encoder),
             ('terminal_modes_adder', terminal_modes_adder),
             ('locations_adder', locations_adder),
