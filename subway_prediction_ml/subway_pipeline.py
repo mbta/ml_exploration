@@ -7,6 +7,7 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from actuals_adder import ActualsAdder
 from destinations_adder import DestinationsAdder
 from locations_adder import LocationsAdder
+from offset_seconds_encoder import OffsetSecondsEncoder
 from terminal_modes_adder import TerminalModesAdder
 
 
@@ -29,6 +30,7 @@ class SubwayPipeline():
     def load(self):
         vehicle_datapoints = self._load_vehicle_datapoints()
 
+        offset_seconds_encoder = OffsetSecondsEncoder()
         terminal_modes_adder = TerminalModesAdder(
             self.locations_frame,
             self.patterns_frame,
@@ -37,18 +39,45 @@ class SubwayPipeline():
         locations_adder = LocationsAdder(self.locations_frame)
         destinations_adder = DestinationsAdder(self.locations_frame)
         actuals_adder = ActualsAdder(self.actuals_frame)
-        onehot_columns = [
+        auto_onehot_columns = [
             'current_location_id',
             'terminal_gtfs_id',
             'automatic',
             'destination_gtfs_id',
-            'event_type'
+            'event_type',
         ]
+
+        auto_onehot_encoder = OneHotEncoder()
+        offset_onehot_encoder = OneHotEncoder(
+            categories=[
+                [
+                    "nan",
+                    "negative",
+                    "0-500",
+                    "500-1000",
+                    "1000-1500",
+                    "1500-2000",
+                    "2000-2500",
+                    "2500-3000",
+                    "3000-3500",
+                    "3500-4000",
+                    "4000-4500",
+                    "4500-5000",
+                    "5000+"
+                ]
+            ],
+        )
         column_transformer = ColumnTransformer([
-            ('1hot', OneHotEncoder(), onehot_columns)
+            ('auto1hot', auto_onehot_encoder, auto_onehot_columns),
+            (
+                'offset1hot',
+                offset_onehot_encoder,
+                ['offset_departure_seconds_from_now']
+            )
         ], remainder="passthrough")
 
         pipeline = Pipeline([
+            ('offset_seconds_encoder', offset_seconds_encoder),
             ('terminal_modes_adder', terminal_modes_adder),
             ('locations_adder', locations_adder),
             ('destinations_adder', destinations_adder),
