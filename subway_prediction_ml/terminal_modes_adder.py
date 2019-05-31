@@ -14,17 +14,8 @@ class TerminalModesAdder(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, vehicle_datapoints, y=None):
-        terminals = self._gtfs_id_for_terminals()
-
-        frame_with_terminals = pd.merge(
-            vehicle_datapoints,
-            right=terminals,
-            left_on="pattern_id",
-            right_on="pattern_id",
-            how="inner"
-        )
         frame_with_terminal_modes = pd.merge(
-            frame_with_terminals,
+            self._vehicle_datapoints_with_terminals(vehicle_datapoints),
             right=self._load_terminal_datapoints(),
             left_on=["generation", "terminal_gtfs_id"],
             right_on=["generation", "terminal_stop_id"],
@@ -67,3 +58,22 @@ class TerminalModesAdder(BaseEstimator, TransformerMixin):
         filtered_terminals_frame['terminal_stop_id'] = \
             filtered_terminals_frame['terminal_stop_id'].astype('str')
         return filtered_terminals_frame
+
+    def _translate_terminals(self, vehicle_datapoints):
+        return vehicle_datapoints.replace(
+            ['70060', '70093', '70838'],
+            ['70059', '70094', '70038'],
+        )
+
+    def _vehicle_datapoints_with_terminals(self, vehicle_datapoints):
+        terminals = self._gtfs_id_for_terminals()
+
+        frame_with_terminals = pd.merge(
+            vehicle_datapoints,
+            right=terminals,
+            left_on="pattern_id",
+            right_on="pattern_id",
+            how="inner"
+        )
+        return self._translate_terminals(frame_with_terminals)
+
