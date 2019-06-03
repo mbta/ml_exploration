@@ -25,7 +25,7 @@ class ActualsAdder(BaseEstimator, TransformerMixin):
         merged_frame = vehicle_datapoints.merge(
             actuals,
             how="inner",
-            on=["gtfs_trip_id", "destination_gtfs_id"]
+            on='gtfs_trip_id'
         ).drop(
             [
                 "generation",

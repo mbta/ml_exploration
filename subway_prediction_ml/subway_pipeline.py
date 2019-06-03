@@ -5,7 +5,6 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 from actuals_adder import ActualsAdder
-from destinations_adder import DestinationsAdder
 from locations_adder import LocationsAdder
 from offset_seconds_encoder import OffsetSecondsEncoder
 from route_filter import RouteFilter
@@ -39,7 +38,6 @@ class SubwayPipeline():
             self.terminals_frame
         )
         locations_adder = LocationsAdder(self.locations_frame)
-        destinations_adder = DestinationsAdder(self.locations_frame)
         actuals_adder = ActualsAdder(self.actuals_frame)
         auto_onehot_columns = [
             'current_location_id',
@@ -84,7 +82,6 @@ class SubwayPipeline():
             ('offset_seconds_encoder', offset_seconds_encoder),
             ('terminal_modes_adder', terminal_modes_adder),
             ('locations_adder', locations_adder),
-            ('destinations_adder', destinations_adder),
             ('actuals_adder', actuals_adder),
             ('final_transformer', final_transformer),
         ])
