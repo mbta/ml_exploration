@@ -69,14 +69,15 @@ class SubwayPipeline():
                 ]
             ],
         )
-        column_transformer = ColumnTransformer([
+        final_transformer = ColumnTransformer([
+            ('pass', 'passthrough', ['actual_seconds_from_now']),
             ('auto1hot', auto_onehot_encoder, auto_onehot_columns),
             (
                 'offset1hot',
                 offset_onehot_encoder,
                 ['offset_departure_seconds_from_now']
             )
-        ], remainder="passthrough")
+        ], remainder=StandardScaler())
 
         pipeline = Pipeline([
             ('route_filter', route_filter),
@@ -85,8 +86,7 @@ class SubwayPipeline():
             ('locations_adder', locations_adder),
             ('destinations_adder', destinations_adder),
             ('actuals_adder', actuals_adder),
-            ('col_transformer', column_transformer),
-            ('std_scaler', StandardScaler())
+            ('final_transformer', final_transformer),
         ])
         return pipeline.fit_transform(vehicle_datapoints)
 
