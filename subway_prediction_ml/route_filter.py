@@ -9,7 +9,7 @@ class RouteFilter(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, vehicle_datapoints, y=None):
-        blue_only = vehicle_datapoints.loc[
+        chosen_route_only = vehicle_datapoints.loc[
             vehicle_datapoints.vehicle_id.map(lambda id: id[0] == self.route)
         ]
-        return blue_only.copy()
+        return chosen_route_only.copy()
