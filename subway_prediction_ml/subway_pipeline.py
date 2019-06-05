@@ -69,8 +69,16 @@ class SubwayPipeline():
                 ]
             ],
         )
+        drop_columns = [
+            "generation",
+            "gtfs_trip_id",
+            "ocs_trip_id",
+            "vehicle_id_x",
+            "vehicle_id_y"
+        ]
         final_transformer = ColumnTransformer([
             ('pass', 'passthrough', ['actual_seconds_from_now']),
+            ('drop', 'drop', drop_columns),
             ('auto1hot', auto_onehot_encoder, auto_onehot_columns),
             (
                 'offset1hot',

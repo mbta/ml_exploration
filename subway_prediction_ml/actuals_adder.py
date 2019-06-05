@@ -26,17 +26,7 @@ class ActualsAdder(BaseEstimator, TransformerMixin):
             actuals,
             how="inner",
             on='gtfs_trip_id'
-        ).drop(
-            [
-                "generation",
-                "gtfs_trip_id",
-                "ocs_trip_id",
-                "vehicle_id_x",
-                "vehicle_id_y"
-            ],
-            axis=1
         )
-
         merged_frame["timestamp"] = merged_frame["timestamp"].apply(
             lambda str: datetime.datetime.strptime(
                 str,
