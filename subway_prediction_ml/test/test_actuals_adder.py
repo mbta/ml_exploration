@@ -26,6 +26,7 @@ class TestActualsAdder(unittest.TestCase):
             columns=['gtfs_trip_id', 'timestamp'],
             data=[
                 ['B-111', "2019-06-05T10:24:30.000000Z"],
+                ['B-111', "2019-06-05T10:24:45.000000Z"],
                 ['B-112', "2019-06-05T10:24:30.000000Z"],
                 ['B-113', "2019-06-05T10:24:30.000000Z"]
             ]
@@ -34,9 +35,13 @@ class TestActualsAdder(unittest.TestCase):
         adder = ActualsAdder(actuals_data)
         result = adder.fit_transform(vehicle_data).__array__().tolist()
         assert sorted(result) == [
+            ['B-111', '70000', 9715.0],
             ['B-111', '70000', 9730.0],
+            ['B-111', '70001', 9745.0],
             ['B-111', '70001', 9760.0],
+            ['B-111', '70002', 9775.0],
             ['B-111', '70002', 9790.0],
+            ['B-111', '70004', 9835.0],
             ['B-111', '70004', 9850.0],
             ['B-112', '70100', 9730.0],
             ['B-112', '70102', 9790.0],
