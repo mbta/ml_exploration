@@ -13,6 +13,7 @@ class TestActualsAdder(unittest.TestCase):
             columns=['trip_id', 'stop_id', 'time'],
             data=[
                 ['B-111', '70000', 1559740000],
+                ['B-111', '70001', 1559740030],
                 ['B-111', '70002', 1559740060],
                 ['B-111', '70004', 1559740120],
                 ['B-112', '70100', 1559740000],
@@ -34,6 +35,7 @@ class TestActualsAdder(unittest.TestCase):
         result = adder.fit_transform(vehicle_data).__array__().tolist()
         assert sorted(result) == [
             ['B-111', '70000', 9730.0],
+            ['B-111', '70001', 9760.0],
             ['B-111', '70002', 9790.0],
             ['B-111', '70004', 9850.0],
             ['B-112', '70100', 9730.0],
