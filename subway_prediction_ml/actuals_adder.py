@@ -14,11 +14,6 @@ class ActualsAdder(BaseEstimator, TransformerMixin):
     # Join actuals to a set of vehicle datapoints
     def transform(self, vehicle_datapoints, y=None):
         actuals = self._load_actuals()
-        actuals = actuals.rename(
-            {"trip_id": "gtfs_trip_id", "stop_id": "destination_gtfs_id"},
-            axis="columns"
-        )
-        actuals["gtfs_trip_id"] = actuals["gtfs_trip_id"].astype(str)
         vehicle_datapoints["gtfs_trip_id"] = \
             vehicle_datapoints["gtfs_trip_id"].astype(str)
 
@@ -51,4 +46,11 @@ class ActualsAdder(BaseEstimator, TransformerMixin):
         raw_frame['stop_id'] = raw_frame['stop_id'].astype('str')
         dropped_frame = raw_frame.dropna(subset=["time"])
         is_subway = dropped_frame["trip_id"].apply(lambda x: x[0:3] != "CR-")
-        return dropped_frame[is_subway].drop_duplicates()
+        subway_actuals = dropped_frame[is_subway].drop_duplicates()
+        subway_actuals = subway_actuals.rename(
+            {"trip_id": "gtfs_trip_id", "stop_id": "destination_gtfs_id"},
+            axis="columns"
+        )
+        subway_actuals["gtfs_trip_id"] = \
+            subway_actuals["gtfs_trip_id"].astype(str)
+        return subway_actuals
