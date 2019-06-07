@@ -47,3 +47,24 @@ class TestActualsAdder(unittest.TestCase):
             ['B-112', '70102', 9790.0],
             ['B-112', '70104', 9850.0],
         ]
+
+    def test_only_join_data_on_same_service_date(self):
+        three_am = 1559804400 # June 6, 2019, 3:00 AM
+
+        actuals_data = pd.DataFrame(
+            columns=['trip_id', 'stop_id', 'time'],
+            data=[
+                ['B-111', '70000', three_am - 1],
+            ]
+        )
+
+        vehicle_data = pd.DataFrame(
+            columns=['gtfs_trip_id', 'timestamp'],
+            data=[
+                ['B-111', "2019-06-06T07:00:00.000000Z"],
+            ]
+        )
+
+        adder = ActualsAdder(actuals_data)
+        result = adder.fit_transform(vehicle_data).__array__().tolist()
+        assert sorted(result) == []
