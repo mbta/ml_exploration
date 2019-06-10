@@ -42,7 +42,6 @@ class SubwayPipeline():
         locations_adder = LocationsAdder(self.locations_frame)
         actuals_adder = ActualsAdder(self.actuals_frame)
         auto_onehot_columns = [
-            'current_location_id',
             'terminal_gtfs_id',
             'automatic',
             'destination_gtfs_id',
@@ -50,6 +49,9 @@ class SubwayPipeline():
         ]
 
         auto_onehot_encoder = OneHotEncoder()
+        current_location_onehot_encoder = OneHotEncoder(
+            categories=[locations_adder.all_locs_sorted()]
+        )
         offset_onehot_encoder = OneHotEncoder(
             categories=[
                 [
@@ -80,6 +82,11 @@ class SubwayPipeline():
             ('pass', 'passthrough', ['actual_seconds_from_now']),
             ('drop', 'drop', drop_columns),
             ('auto1hot', auto_onehot_encoder, auto_onehot_columns),
+            (
+                'currentlocation1hot',
+                current_location_onehot_encoder,
+                ['current_location_id']
+            ),
             (
                 'offset1hot',
                 offset_onehot_encoder,
