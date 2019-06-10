@@ -24,12 +24,12 @@ class LocationsAdder(BaseEstimator, TransformerMixin):
         )
         n_hot_per_row = pd.DataFrame(
             n_hot_per_row_list_of_lists,
-            columns=self._all_locs_sorted()
+            columns=self.all_locs_sorted()
         )
         return vehicle_datapoints.join(n_hot_per_row, how="inner")
 
     # Return array of all location IDs in lexicographical order
-    def _all_locs_sorted(self):
+    def all_locs_sorted(self):
         return sorted(self.locations_frame["loc_id"].__array__())
 
     # Builds a map of generations to the list of n-hot encoded vehicle
@@ -60,7 +60,7 @@ class LocationsAdder(BaseEstimator, TransformerMixin):
         for generation in generational_n_hot_locations:
             location_map = generational_n_hot_locations[generation]
             n_hot_columns = []
-            for location in self._all_locs_sorted():
+            for location in self.all_locs_sorted():
                 n_hot_columns.append(location_map[location])
                 generational_n_hot_location_lists[generation] = n_hot_columns
 
