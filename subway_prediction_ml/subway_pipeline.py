@@ -39,7 +39,7 @@ class SubwayPipeline():
             self.patterns_frame,
             self.terminals_frame
         )
-        locations_adder = LocationsAdder(self.locations_frame)
+        locations_adder = LocationsAdder(self.locations_frame, route='B')
         actuals_adder = ActualsAdder(self.actuals_frame)
         auto_onehot_columns = [
             'terminal_gtfs_id',
