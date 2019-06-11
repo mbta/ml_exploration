@@ -4,8 +4,10 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 
 class LocationsAdder(BaseEstimator, TransformerMixin):
-    def __init__(self, locations_frame):
+    def __init__(self, locations_frame, route=None):
         self.locations_frame = locations_frame
+        self._all_locs_sorted = None
+        self._route = route
 
     def fit(self, vehicle_datapoints, y=None):
         return self
@@ -30,7 +32,19 @@ class LocationsAdder(BaseEstimator, TransformerMixin):
 
     # Return array of all location IDs in lexicographical order
     def all_locs_sorted(self):
-        return sorted(self.locations_frame["loc_id"].__array__())
+        if self._all_locs_sorted is None:
+            if self._route:
+                filtered_locations_frame = self.locations_frame.query(
+                    f"line == '{self._route}'"
+                )
+            else:
+                filtered_locations_frame = self.locations_frame
+
+            self._all_locs_sorted = sorted(
+                filtered_locations_frame["loc_id"].__array__()
+            )
+
+        return self._all_locs_sorted
 
     # Builds a map of generations to the list of n-hot encoded vehicle
     # positions for that generation.
@@ -49,11 +63,11 @@ class LocationsAdder(BaseEstimator, TransformerMixin):
                 occupied_locations_by_generation[generation_id].add(location)
 
             generational_n_hot_locations[generation_id] = defaultdict(
-                lambda: 0
+                lambda: 0.0
             )
             for location in occupied_locations_by_generation[generation_id]:
                 generational_n_hot_locations[generation_id].update(
-                    {location: 1}
+                    {location: 1.0}
                 )
 
         generational_n_hot_location_lists = {}

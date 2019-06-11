@@ -33,3 +33,31 @@ class TestLocationsAdder(unittest.TestCase):
             ['B-112', 12345, "44--72", 1.0, 0.0, 1.0, 0.0],
             ['B-112', 12346, "45--73", 0.0, 1.0, 0.0, 1.0],
         ]
+
+    def test_locations_can_be_filtered_by_line(self):
+        locations_data = pd.DataFrame(
+            columns=["loc_id", "line"],
+            data=[
+                ["42--70", "R"],
+                ["43--71", "O"],
+                ["44--72", "R"],
+                ["45--73", "G"]
+            ]
+        )
+
+        vehicle_data = pd.DataFrame(
+            columns=['trip_id', 'generation', 'current_location_id'],
+            data=[
+                ['B-111', 12345, "42--70"],
+                ['B-112', 12345, "44--72"],
+                ['B-111', 12347, "44--72"]
+            ]
+        )
+        adder = LocationsAdder(locations_data, route="R")
+        result = adder.fit_transform(vehicle_data).__array__().tolist()
+        print(sorted(result))
+        assert sorted(result) == [
+            ['B-111', 12345, '42--70', 1.0, 1.0],
+            ['B-111', 12347, '44--72', 0.0, 1.0],
+            ['B-112', 12345, '44--72', 1.0, 1.0]
+        ]
